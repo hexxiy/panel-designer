@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Panel, PanelFormatId, Placement, LayerType } from '../core/types'
+import type { Panel, PanelFormatId, Placement, TextPlacement, LayerType } from '../core/types'
 import { createPanel, getFormat } from '../core'
 import { savePanel as persistPanel, listPanels } from '../utils/serialization'
 
@@ -26,9 +26,14 @@ interface PanelState {
   setPanelName: (name: string) => void
   setPanelAuthor: (author: string) => void
   addPlacement: (layerType: LayerType, partId: string, x: number, y: number, rotation?: number, pairedGroupId?: string) => string
+  addTextPlacement: (layerType: LayerType, label: string, x: number, y: number, rotation?: number, fontSize?: number) => string
+  removeTextPlacement: (layerType: LayerType, textId: string) => void
+  updateTextPlacement: (layerType: LayerType, textId: string, changes: Partial<TextPlacement>) => void
   removePlacement: (layerType: LayerType, placementId: string) => void
   updatePlacement: (layerType: LayerType, placementId: string, changes: Partial<Placement>) => void
   setLayerHeight: (layerId: string, height: number) => void
+  setLayerMaterial: (layerId: string, material: 'aluminium' | 'pcb') => void
+  setLayerPcbLayers: (layerId: string, pcbLayers: 2 | 4) => void
   setMountingHoleRingDiameter: (index: number, ringDiameter: number) => void
   getLayerPlacements: (layerType: LayerType) => Placement[]
   saveToDB: () => Promise<void>
@@ -214,6 +219,84 @@ export const usePanelStore = create<PanelState>((set, get) => ({
     }
   }),
 
+  addTextPlacement: (layerType, label, x, y, rotation = 0, fontSize = 3) => {
+    const id = crypto.randomUUID()
+    set(s => {
+      const layer = findLayer(s.panel, layerType)
+      if (!layer) return s
+      const oldPanel = clonePanel(s.panel)
+      const undoStack = s.undoStack.length >= MAX_HISTORY
+        ? [...s.undoStack.slice(1), oldPanel]
+        : [...s.undoStack, oldPanel]
+      const text: TextPlacement = { id, x, y, rotation, locked: false, label, fontSize }
+      return {
+        panel: {
+          ...s.panel,
+          layers: s.panel.layers.map(l =>
+            l.type === layerType ? { ...l, texts: [...l.texts, text] } : l
+          ),
+          metadata: { ...s.panel.metadata, modified: new Date().toISOString() },
+        },
+        undoStack,
+        redoStack: [],
+        canUndo: true,
+        canRedo: false,
+      }
+    })
+    return id
+  },
+
+  removeTextPlacement: (layerType, textId) => set(s => {
+    const layer = findLayer(s.panel, layerType)
+    if (!layer) return s
+    const oldPanel = clonePanel(s.panel)
+    const undoStack = s.undoStack.length >= MAX_HISTORY
+      ? [...s.undoStack.slice(1), oldPanel]
+      : [...s.undoStack, oldPanel]
+    return {
+      panel: {
+        ...s.panel,
+        layers: s.panel.layers.map(l =>
+          l.type === layerType
+            ? { ...l, texts: l.texts.filter(t => t.id !== textId) }
+            : l
+        ),
+      },
+      undoStack,
+      redoStack: [],
+      canUndo: true,
+      canRedo: false,
+    }
+  }),
+
+  updateTextPlacement: (layerType, textId, changes) => set(s => {
+    const layer = findLayer(s.panel, layerType)
+    if (!layer) return s
+    const oldPanel = clonePanel(s.panel)
+    const undoStack = s.undoStack.length >= MAX_HISTORY
+      ? [...s.undoStack.slice(1), oldPanel]
+      : [...s.undoStack, oldPanel]
+    return {
+      panel: {
+        ...s.panel,
+        layers: s.panel.layers.map(l =>
+          l.type === layerType
+            ? {
+                ...l,
+                texts: l.texts.map(t =>
+                  t.id === textId ? { ...t, ...changes } : t
+                ),
+              }
+            : l
+        ),
+      },
+      undoStack,
+      redoStack: [],
+      canUndo: true,
+      canRedo: false,
+    }
+  }),
+
   setLayerHeight: (layerId, height) => set(s => {
     const oldPanel = clonePanel(s.panel)
     const undoStack = s.undoStack.length >= MAX_HISTORY
@@ -224,6 +307,46 @@ export const usePanelStore = create<PanelState>((set, get) => ({
         ...s.panel,
         layers: s.panel.layers.map(l =>
           l.id === layerId ? { ...l, height } : l
+        ),
+        metadata: { ...s.panel.metadata, modified: new Date().toISOString() },
+      },
+      undoStack,
+      redoStack: [],
+      canUndo: true,
+      canRedo: false,
+    }
+  }),
+
+  setLayerMaterial: (layerId, material) => set(s => {
+    const oldPanel = clonePanel(s.panel)
+    const undoStack = s.undoStack.length >= MAX_HISTORY
+      ? [...s.undoStack.slice(1), oldPanel]
+      : [...s.undoStack, oldPanel]
+    return {
+      panel: {
+        ...s.panel,
+        layers: s.panel.layers.map(l =>
+          l.id === layerId ? { ...l, material } : l
+        ),
+        metadata: { ...s.panel.metadata, modified: new Date().toISOString() },
+      },
+      undoStack,
+      redoStack: [],
+      canUndo: true,
+      canRedo: false,
+    }
+  }),
+
+  setLayerPcbLayers: (layerId, pcbLayers) => set(s => {
+    const oldPanel = clonePanel(s.panel)
+    const undoStack = s.undoStack.length >= MAX_HISTORY
+      ? [...s.undoStack.slice(1), oldPanel]
+      : [...s.undoStack, oldPanel]
+    return {
+      panel: {
+        ...s.panel,
+        layers: s.panel.layers.map(l =>
+          l.id === layerId ? { ...l, pcbLayers } : l
         ),
         metadata: { ...s.panel.metadata, modified: new Date().toISOString() },
       },

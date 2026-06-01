@@ -7,18 +7,50 @@ import { snapToGrid } from './panelView'
 interface PlacementGhostProps {
   mousePanelPos: { x: number; y: number } | null
   activePartId: string | null
+  activeGroupId: string | null
   panelHeight: number
   panX: number
   panY: number
   zoom: number
   valid: boolean
+  activeTool: string
+  textLayer: 'silkscreen' | 'copper'
 }
 
-export function PlacementGhost({ mousePanelPos, activePartId, panelHeight, panX, panY, zoom, valid }: PlacementGhostProps) {
+export function PlacementGhost({ mousePanelPos, activePartId, activeGroupId, panelHeight, panX, panY, zoom, valid, activeTool, textLayer }: PlacementGhostProps) {
   const parts = usePartsLibraryStore(s => s.parts)
+  const groups = usePartsLibraryStore(s => s.groups)
 
   const ghost = useMemo(() => {
-    if (!mousePanelPos || !activePartId) return null
+    if (!mousePanelPos) return null
+
+    if (activeGroupId) {
+      const group = groups.find(g => g.id === activeGroupId)
+      if (!group) return null
+      const snappedX = snapToGrid(mousePanelPos.x, 5.08)
+      const snappedY = snapToGrid(mousePanelPos.y, 5)
+      const pos = panelToStage(snappedX, snappedY, panelHeight, panX, panY, zoom)
+      return {
+        x: pos.x,
+        y: pos.y,
+        w: group.dimensions.width * zoom,
+        h: group.dimensions.height * zoom,
+      }
+    }
+
+    if (activeTool === 'text') {
+      const snappedX = snapToGrid(mousePanelPos.x, 5.08)
+      const snappedY = snapToGrid(mousePanelPos.y, 5)
+      const pos = panelToStage(snappedX, snappedY, panelHeight, panX, panY, zoom)
+      return {
+        x: pos.x,
+        y: pos.y,
+        w: 20 * zoom,
+        h: 6 * zoom,
+      }
+    }
+
+    if (!activePartId) return null
     const part = parts.find(p => p.id === activePartId)
     if (!part) return null
 
@@ -32,7 +64,7 @@ export function PlacementGhost({ mousePanelPos, activePartId, panelHeight, panX,
       w: part.dimensions.width * zoom,
       h: part.dimensions.height * zoom,
     }
-  }, [mousePanelPos, activePartId, parts, panelHeight, panX, panY, zoom])
+  }, [mousePanelPos, activePartId, activeGroupId, parts, groups, panelHeight, panX, panY, zoom, activeTool, textLayer])
 
   if (!ghost) return null
 

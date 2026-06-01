@@ -20,6 +20,7 @@ const LAYER_COLORS: Record<string, string> = {
   panel: '#8a8a8a',
   pcb_components: '#3a8a9a',
 }
+const COPPER_COLOR = '#c07a3a'
 
 function getArcPoints(
   x1: number, y1: number,
@@ -66,6 +67,7 @@ function SilkscreenGraphics({ graphics, zoom, color }: { graphics: import('../..
                 x={g.cx * zoom}
                 y={-g.cy * zoom}
                 radius={g.radius * zoom}
+                fill={g.fill ?? undefined}
                 stroke={color}
                 strokeWidth={Math.max(0.5, g.width * zoom)}
                 listening={false}
@@ -236,7 +238,7 @@ export function PlacementNode({
         cornerRadius={1}
       />
       {part.footprint?.pads.map((pad, i) => (
-        <PadShape key={i} pad={pad} zoom={zoom} color={color} />
+        <PadShape key={i} pad={pad} zoom={zoom} color={pad.type === 'npth' ? COPPER_COLOR : color} />
       ))}
       {part.footprint && part.footprint.graphics.length > 0 && (
         <SilkscreenGraphics graphics={part.footprint.graphics} zoom={zoom} color="#fff" />
@@ -246,21 +248,13 @@ export function PlacementNode({
           x={part.panelCutout.x * zoom}
           y={(-part.panelCutout.y) * zoom}
           radius={part.panelCutout.width / 2 * zoom}
-          stroke={selected ? '#fff' : color}
+          fill={selected ? '#fff' : '#111'}
+          opacity={0.85}
+          stroke={selected ? '#fff' : '#555'}
           strokeWidth={1 / zoom}
           listening={false}
         />
       )}
-      <Text
-        x={-80}
-        y={-h / 2 - 10}
-        width={160}
-        text={part.name}
-        fontSize={Math.max(6, Math.min(10, 10 / zoom))}
-        fill={color}
-        align="center"
-        listening={false}
-      />
     </Group>
   )
 }

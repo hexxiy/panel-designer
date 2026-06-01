@@ -34,8 +34,12 @@ export function Toolbar() {
   const activePartId = useUIStore(s => s.activePartId)
   const setActiveTool = useUIStore(s => s.setActiveTool)
   const setActivePartId = useUIStore(s => s.setActivePartId)
+  const textLayer = useUIStore(s => s.textLayer)
+  const setTextLayer = useUIStore(s => s.setTextLayer)
 
   const panel = usePanelStore(s => s.panel)
+  const panelLayer = panel.layers.find(l => l.type === 'panel')
+  const panelMaterial = panelLayer?.material ?? 'aluminium'
   const undo = usePanelStore(s => s.undo)
   const redo = usePanelStore(s => s.redo)
   const canUndo = usePanelStore(s => s.canUndo)
@@ -70,10 +74,15 @@ export function Toolbar() {
   }, [])
 
   const deleteSelected = useCallback(() => {
+    const removeTextPlacement = usePanelStore.getState().removeTextPlacement
     const pairedGroups = new Set<string>()
     const directIds = new Set(selectedPlacementIds)
     for (const id of selectedPlacementIds) {
       for (const layer of panel.layers) {
+        if (layer.texts.some(t => t.id === id)) {
+          removeTextPlacement(layer.type, id)
+          continue
+        }
         const pl = layer.placements.find(p => p.id === id)
         if (pl?.pairedGroupId) pairedGroups.add(pl.pairedGroupId)
         break
@@ -112,6 +121,7 @@ export function Toolbar() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      if (e.key === 't' || e.key === 'T') setActiveTool('text')
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault()
         undo()
@@ -225,7 +235,60 @@ export function Toolbar() {
           >
             ⚬ Place
           </button>
+          <button
+            onClick={() => setActiveTool(activeTool === 'text' ? 'select' : 'text')}
+            title="Text (T)"
+            style={{
+              background: activeTool === 'text' ? 'var(--color-bg)' : 'transparent',
+              border: 'none',
+              borderLeft: '1px solid var(--color-border)',
+              color: activeTool === 'text' ? '#d4a017' : 'var(--color-text-dim)',
+              padding: '2px 8px',
+              cursor: 'pointer',
+              fontSize: '0.75rem',
+            }}
+          >
+            T
+          </button>
         </div>
+        {activeTool === 'text' && (
+          <div
+            style={{
+              display: 'flex',
+              borderRadius: 'var(--radius)',
+              border: '1px solid var(--color-border)',
+              overflow: 'hidden',
+              fontSize: '0.68rem',
+            }}
+          >
+            <button
+              onClick={() => setTextLayer('silkscreen')}
+              style={{
+                background: textLayer === 'silkscreen' ? 'var(--color-bg)' : 'transparent',
+                border: 'none',
+                color: textLayer === 'silkscreen' ? '#fff' : 'var(--color-text-dim)',
+                padding: '2px 8px',
+                cursor: 'pointer',
+              }}
+            >
+              Silkscreen
+            </button>
+            <button
+              onClick={() => panelMaterial !== 'aluminium' && setTextLayer('copper')}
+              title={panelMaterial === 'aluminium' ? 'Not available on aluminium panel' : 'Copper text'}
+              style={{
+                background: textLayer === 'copper' ? 'var(--color-bg)' : 'transparent',
+                border: 'none',
+                borderLeft: '1px solid var(--color-border)',
+                color: textLayer === 'copper' ? '#c07a3a' : panelMaterial === 'aluminium' ? 'var(--color-border)' : 'var(--color-text-dim)',
+                padding: '2px 8px',
+                cursor: panelMaterial === 'aluminium' ? 'not-allowed' : 'pointer',
+              }}
+            >
+              Copper
+            </button>
+          </div>
+        )}
 
         <button
           onClick={undo}

@@ -1,9 +1,9 @@
 import { create } from 'zustand'
-import type { Part } from '../core/types/part'
+import type { Part, PartGroup } from '../core/types/part'
 import { parseKicadMod } from '../parsers/kicad'
 import { getLibraryParts } from '../core/library-parts'
 import { PART_PAIRINGS } from '../core/part-pairings'
-import { SAMPLE_PARTS } from '../core/sample-parts'
+import { SAMPLE_PARTS, SAMPLE_GROUPS } from '../core/sample-parts'
 
 const DB_NAME = 'panel-designer'
 const STORE_NAME = 'parts'
@@ -55,23 +55,36 @@ async function deletePartFromDB(id: string): Promise<void> {
 
 interface PartsLibraryState {
   parts: Part[]
+  groups: PartGroup[]
   selectedPartId: string | null
+  selectedGroupId: string | null
   searchQuery: string
   loading: boolean
+  expandedGroupIds: string[]
+  groupSlotOverrides: Record<string, Record<number, string>>
 
   loadFromDB: () => Promise<void>
   addPart: (part: Part) => Promise<void>
+  updatePart: (id: string, changes: Partial<Part>) => Promise<void>
   removePart: (id: string) => Promise<void>
   importFromFile: (file: File) => Promise<Part>
   selectPart: (id: string | null) => void
+  selectGroup: (id: string | null) => void
   setSearchQuery: (query: string) => void
+  toggleGroupExpanded: (id: string) => void
+  setSlotOverride: (groupId: string, slotIndex: number, partName: string) => void
+  resolveSlotPartId: (group: PartGroup, slotIndex: number, parts: Part[]) => string | null
 }
 
-export const usePartsLibraryStore = create<PartsLibraryState>((set) => ({
+export const usePartsLibraryStore = create<PartsLibraryState>((set, get) => ({
   parts: [],
+  groups: [],
   selectedPartId: null,
+  selectedGroupId: null,
   searchQuery: '',
   loading: false,
+  expandedGroupIds: [],
+  groupSlotOverrides: {},
 
   loadFromDB: async () => {
     set({ loading: true })
@@ -98,16 +111,61 @@ export const usePartsLibraryStore = create<PartsLibraryState>((set) => ({
           }
         }
       }
-      set({ parts, loading: false })
+      set({ parts, groups: SAMPLE_GROUPS, loading: false })
     } catch {
       const libraryParts = await getLibraryParts()
-      set({ parts: libraryParts, loading: false })
+      set({ parts: libraryParts, groups: SAMPLE_GROUPS, loading: false })
     }
   },
 
   addPart: async (part) => {
     await putPartInDB(part)
     set(s => ({ parts: [...s.parts, part] }))
+  },
+
+  updatePart: async (id, changes) => {
+    const { parts, groups, groupSlotOverrides } = get()
+    const idx = parts.findIndex(p => p.id === id)
+    if (idx === -1) return
+    const old = parts[idx]
+    const updated: Part = { ...old, ...changes }
+    await putPartInDB(updated)
+    const newParts = [...parts]
+    newParts[idx] = updated
+
+    const oldName = old.name
+    const newName = changes.name
+    const nameChanged = newName !== undefined && newName !== oldName
+    const layerChanged = changes.layerType !== undefined && changes.layerType !== old.layerType
+
+    let newGroups = groups
+    if (nameChanged || layerChanged) {
+      newGroups = groups.map(g => ({
+        ...g,
+        slots: g.slots.map(slot => {
+          if (slot.partName !== oldName) return slot
+          return {
+            ...slot,
+            ...(nameChanged ? { partName: newName! } : {}),
+            ...(layerChanged ? { layerType: changes.layerType! } : {}),
+          }
+        }),
+      }))
+    }
+
+    let newOverrides = groupSlotOverrides
+    if (nameChanged) {
+      newOverrides = {}
+      for (const [gid, overrides] of Object.entries(groupSlotOverrides)) {
+        const mapped: Record<number, string> = {}
+        for (const [idxStr, partName] of Object.entries(overrides)) {
+          mapped[Number(idxStr)] = partName === oldName ? newName! : partName
+        }
+        newOverrides[gid] = mapped
+      }
+    }
+
+    set({ parts: newParts, groups: newGroups, groupSlotOverrides: newOverrides })
   },
 
   removePart: async (id) => {
@@ -126,6 +184,25 @@ export const usePartsLibraryStore = create<PartsLibraryState>((set) => ({
     return part
   },
 
-  selectPart: (id) => set({ selectedPartId: id }),
+  selectPart: (id) => set({ selectedPartId: id, selectedGroupId: null }),
+  selectGroup: (id) => set({ selectedGroupId: id, selectedPartId: null }),
   setSearchQuery: (query) => set({ searchQuery: query }),
+  toggleGroupExpanded: (id) => set(s => ({
+    expandedGroupIds: s.expandedGroupIds.includes(id)
+      ? s.expandedGroupIds.filter(gid => gid !== id)
+      : [...s.expandedGroupIds, id],
+  })),
+  setSlotOverride: (groupId, slotIndex, partName) => set(s => ({
+    groupSlotOverrides: {
+      ...s.groupSlotOverrides,
+      [groupId]: { ...s.groupSlotOverrides[groupId], [slotIndex]: partName },
+    },
+  })),
+  resolveSlotPartId: (group, slotIndex, parts) => {
+    const { groupSlotOverrides } = get()
+    const override = groupSlotOverrides[group.id]?.[slotIndex]
+    const partName = override ?? group.slots[slotIndex]?.partName
+    if (!partName) return null
+    return parts.find(p => p.name === partName)?.id ?? null
+  },
 }))

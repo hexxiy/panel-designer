@@ -1,4 +1,4 @@
-import type { Part } from './types/part'
+import type { Part, PartGroup } from './types/part'
 
 const potHole7_5mm: Part = {
   id: crypto.randomUUID(),
@@ -172,25 +172,8 @@ export const SAMPLE_PARTS: Part[] = [
       pads: [],
       models: ['davies_1900.step'],
       graphics: [
-        { type: 'circle', cx: 0, cy: 0, radius: 6.5, width: 0.3 },
+        { type: 'circle', cx: 0, cy: 0, radius: 6.5, width: 0.3, fill: '#000' },
         { type: 'line', x1: 0, y1: 0, x2: 0, y2: 4.5, width: 0.5 },
-      ],
-    },
-    dimensions: { width: 13, height: 13, depth: 0 },
-  },
-  {
-    id: crypto.randomUUID(),
-    name: 'KnobAssembly',
-    category: 'other',
-    layerType: 'pcb_components',
-    footprint: {
-      name: 'KnobAssembly',
-      pads: [],
-      models: [],
-      graphics: [
-        { type: 'circle', cx: 0, cy: 0, radius: 6.5, width: 0.3 },
-        { type: 'line', x1: 0, y1: 0, x2: 0, y2: 4.5, width: 0.5 },
-        { type: 'circle', cx: 0, cy: 0, radius: 3.25, width: 0.2 },
       ],
     },
     dimensions: { width: 13, height: 13, depth: 0 },
@@ -212,5 +195,63 @@ export const SAMPLE_PARTS: Part[] = [
       graphics: [],
     },
     dimensions: { width: 9, height: 16, depth: 0 },
+  },
+  {
+    id: crypto.randomUUID(),
+    name: 'jack_pot_hole',
+    category: 'mounting_hole',
+    layerType: 'panel',
+    panelCutout: { type: 'circle', width: 6.5, height: 6.5, x: 0, y: 0 },
+    dimensions: { width: 6.5, height: 6.5, depth: 0 },
+  },
+  {
+    id: crypto.randomUUID(),
+    name: 'jack_pot_out_hole',
+    category: 'mounting_hole',
+    layerType: 'panel',
+    panelCutout: { type: 'circle', width: 6.5, height: 6.5, x: 0, y: 0 },
+    dimensions: { width: 6.5, height: 6.5, depth: 0 },
+  },
+  {
+    id: crypto.randomUUID(),
+    name: 'knurl',
+    category: 'other',
+    layerType: 'interface',
+    footprint: {
+      name: 'knurl',
+      pads: [],
+      models: [],
+      graphics: [
+        { type: 'circle', cx: 0, cy: 0, radius: 4.25, width: 0.4 },
+      ],
+    },
+    dimensions: { width: 8.5, height: 8.5, depth: 0 },
+  },
+]
+
+export const SAMPLE_GROUPS: PartGroup[] = [
+  {
+    id: crypto.randomUUID(),
+    name: 'KnobAssembly',
+    description: 'Potentiometer with knob',
+    category: 'pot',
+    slots: [
+      { layerType: 'pcb_components', partName: 'Alpha9mmPot' },
+      { layerType: 'panel', partName: 'pot_hole_7.5mm' },
+      { layerType: 'interface', partName: 'Davies1900' },
+    ],
+    dimensions: { width: 13, height: 13, depth: 0 },
+  },
+  {
+    id: crypto.randomUUID(),
+    name: 'jack_assembly',
+    description: 'Audio jack with knurl nut',
+    category: 'jack',
+    slots: [
+      { layerType: 'pcb_components', partName: 'PJ301M-12' },
+      { layerType: 'panel', partName: 'jack_pot' },
+      { layerType: 'interface', partName: 'knurl' },
+    ],
+    dimensions: { width: 9, height: 11.4, depth: 0 },
   },
 ]

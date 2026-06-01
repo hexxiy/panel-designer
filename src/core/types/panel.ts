@@ -18,6 +18,16 @@ export interface Placement {
   pairedGroupId?: string
 }
 
+export interface TextPlacement {
+  id: string
+  x: number
+  y: number
+  rotation: number
+  locked: boolean
+  label: string
+  fontSize: number
+}
+
 export interface Layer {
   id: string
   type: LayerType
@@ -25,7 +35,10 @@ export interface Layer {
   visible: boolean
   locked: boolean
   placements: Placement[]
+  texts: TextPlacement[]
   height?: number
+  material?: 'aluminium' | 'pcb'
+  pcbLayers?: 2 | 4
 }
 
 export interface MountingHoleOverride {
@@ -58,6 +71,7 @@ export function createLayer(type: LayerType, label: string, height?: number): La
     visible: true,
     locked: false,
     placements: [],
+    texts: [],
     height,
   }
 }
@@ -70,8 +84,8 @@ export function createPanel(format: PanelFormatId, hp: number, actualWidthMm: nu
     format,
     dimensions: { hp, actualWidthMm, heightMm },
     layers: [
-      createLayer('pcb_components', 'PCB Components', fmt.pcbHeightMm),
-      createLayer('panel', 'Panel'),
+      { ...createLayer('pcb_components', 'PCB Components', fmt.pcbHeightMm), pcbLayers: 2 },
+      { ...createLayer('panel', 'Panel'), material: 'aluminium' },
       createLayer('interface', 'Interface Components'),
     ],
     pairings: [],

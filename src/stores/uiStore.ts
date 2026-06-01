@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 
-export type ActiveTool = 'select' | 'place'
+export type ActiveTool = 'select' | 'place' | 'text'
 
 interface UIState {
   activeTool: ActiveTool
   activePartId: string | null
+  activeGroupId: string | null
   selectedPlacementIds: string[]
   selectedMountingHoleIndex: number | null
   zoom: number
@@ -15,9 +16,13 @@ interface UIState {
   overlayMode: boolean
   showGrid: boolean
   gridSize: number
+  textLayer: 'silkscreen' | 'copper'
+  textContent: string
+  textFontSize: number
 
   setActiveTool: (tool: ActiveTool) => void
   setActivePartId: (id: string | null) => void
+  setActiveGroupId: (id: string | null) => void
   selectPlacement: (id: string | null) => void
   selectPlacements: (ids: string[]) => void
   clearSelection: () => void
@@ -29,11 +34,15 @@ interface UIState {
   setOverlayMode: (overlay: boolean) => void
   setShowGrid: (show: boolean) => void
   setGridSize: (size: number) => void
+  setTextLayer: (layer: 'silkscreen' | 'copper') => void
+  setTextContent: (content: string) => void
+  setTextFontSize: (size: number) => void
 }
 
 export const useUIStore = create<UIState>((set) => ({
   activeTool: 'select',
   activePartId: null,
+  activeGroupId: null,
   selectedPlacementIds: [],
   selectedMountingHoleIndex: null,
   zoom: 2,
@@ -44,12 +53,17 @@ export const useUIStore = create<UIState>((set) => ({
   overlayMode: false,
   showGrid: true,
   gridSize: 10,
+  textLayer: 'silkscreen',
+  textContent: 'Text',
+  textFontSize: 3,
 
   setActiveTool: (tool) => set(s => ({
     activeTool: tool,
-    activePartId: tool === 'select' ? null : s.activePartId,
+    activePartId: tool === 'select' || tool === 'text' ? null : s.activePartId,
+    activeGroupId: tool === 'select' || tool === 'text' ? null : s.activeGroupId,
   })),
-  setActivePartId: (id) => set({ activePartId: id, activeTool: id ? 'place' : 'select' }),
+  setActivePartId: (id) => set({ activePartId: id, activeGroupId: null, activeTool: id ? 'place' : 'select' }),
+  setActiveGroupId: (id) => set({ activeGroupId: id, activePartId: null, activeTool: id ? 'place' : 'select' }),
 
   selectPlacement: (id) => set({ selectedPlacementIds: id ? [id] : [], selectedMountingHoleIndex: null }),
   selectPlacements: (ids) => set({ selectedPlacementIds: ids, selectedMountingHoleIndex: null }),
@@ -64,4 +78,7 @@ export const useUIStore = create<UIState>((set) => ({
   setOverlayMode: (overlay) => set({ overlayMode: overlay }),
   setShowGrid: (show) => set({ showGrid: show }),
   setGridSize: (size) => set({ gridSize: Math.max(1, size) }),
+  setTextLayer: (layer) => set({ textLayer: layer }),
+  setTextContent: (content) => set({ textContent: content }),
+  setTextFontSize: (size) => set({ textFontSize: Math.max(1, size) }),
 }))

@@ -3,11 +3,11 @@ import { Stage, Layer, Rect, Line } from 'react-konva'
 import { usePanelStore } from '../../stores/panelStore'
 import { usePartsLibraryStore } from '../../stores/partsLibraryStore'
 import { useUIStore } from '../../stores/uiStore'
-import { useThemeStore } from '../../stores/themeStore'
 import { snapToGrid } from './panelView'
 import { MountingHoles } from './MountingHoles'
 import { PanelGrid } from './PanelGrid'
 import { PlacementNode } from './PlacementNode'
+import { TextNode } from './TextNode'
 import { PlacementGhost } from './PlacementGhost'
 import { stageToPanel } from './panelView'
 import { placementWithinBounds, getPartBoundingBox, boxesOverlap, partMargin } from '../../core/grid'
@@ -17,18 +17,26 @@ import type { LayerType } from '../../core/types/part'
 export function PanelCanvas() {
   const panel = usePanelStore(s => s.panel)
   const addPlacement = usePanelStore(s => s.addPlacement)
+  const addTextPlacement = usePanelStore(s => s.addTextPlacement)
   const updatePlacement = usePanelStore(s => s.updatePlacement)
   const removePlacement = usePanelStore(s => s.removePlacement)
+  const updateTextPlacement = usePanelStore(s => s.updateTextPlacement)
   const parts = usePartsLibraryStore(s => s.parts)
-  const themeId = useThemeStore(s => s.themeId)
+  const groups = usePartsLibraryStore(s => s.groups)
+  const resolveSlotPartId = usePartsLibraryStore(s => s.resolveSlotPartId)
 
   const activeTool = useUIStore(s => s.activeTool)
   const activePartId = useUIStore(s => s.activePartId)
+  const activeGroupId = useUIStore(s => s.activeGroupId)
+  const textLayer = useUIStore(s => s.textLayer)
+  const textContent = useUIStore(s => s.textContent)
+  const textFontSize = useUIStore(s => s.textFontSize)
   const selectedPlacementIds = useUIStore(s => s.selectedPlacementIds)
   const zoom = useUIStore(s => s.zoom)
   const panX = useUIStore(s => s.panX)
   const panY = useUIStore(s => s.panY)
   const layerVisibility = useUIStore(s => s.layerVisibility)
+  const activeLayerId = useUIStore(s => s.activeLayerId)
   const overlayMode = useUIStore(s => s.overlayMode)
   const showGrid = useUIStore(s => s.showGrid)
   const gridSize = useUIStore(s => s.gridSize)
@@ -39,8 +47,6 @@ export function PanelCanvas() {
   const setPan = useUIStore(s => s.setPan)
 
   const { actualWidthMm: w, heightMm: h } = panel.dimensions
-
-  const palette = useCallback((light: string, dark: string) => themeId === 'light' ? light : dark, [themeId])
 
   const [mousePanelPos, setMousePanelPos] = useState<{ x: number; y: number } | null>(null)
   const [isPlacementValid, setIsPlacementValid] = useState(true)
@@ -97,21 +103,27 @@ export function PanelCanvas() {
       return
     }
 
-    if (activeTool === 'place' && activePartId && e.target === e.target.getStage()) {
+    if (activeTool === 'text') {
       const stage = e.target.getStage()
       const pointer = stage?.getPointerPosition()
-      if (!pointer) return
+      if (!pointer || e.target !== stage) return
 
       const panelPos = stageToPanel(pointer.x, pointer.y, h, panX, panY, zoom)
       const snappedX = snapToGrid(panelPos.x, 5.08)
       const snappedY = snapToGrid(panelPos.y, 5)
 
-      const part = parts.find(p => p.id === activePartId)
-      if (!part) return
+      const panelLayer = panel.layers.find(l => l.type === 'panel')
+      const isCopperOnAluminium = textLayer === 'copper' && panelLayer?.material === 'aluminium'
+      if (isCopperOnAluminium) return
 
-      const margin = partMargin(part)
-      const halfW = part.dimensions.width / 2
-      const halfH = part.dimensions.height / 2
+      const activeLayer = activeLayerId ? panel.layers.find(l => l.id === activeLayerId) : undefined
+      const layerType = activeLayer
+        ? activeLayer.type === 'interface' ? 'panel' : activeLayer.type
+        : textLayer === 'silkscreen' ? 'panel' : 'pcb_components'
+
+      const halfW = 10
+      const halfH = 3
+      const margin = 1
       if (!placementWithinBounds(snappedX, snappedY, halfW, halfH, w, h, margin)) return
 
       const allPlacements = panel.layers.flatMap(l => l.placements)
@@ -124,20 +136,68 @@ export function PanelCanvas() {
         if (boxesOverlap(newBox, plBox, buffer)) return
       }
 
-      if (part.name === 'KnobAssembly') {
+      addTextPlacement(layerType, textContent, snappedX, snappedY, 0, textFontSize)
+      return
+    }
+
+    if (activeTool === 'place' && (activePartId || activeGroupId) && e.target === e.target.getStage()) {
+      const stage = e.target.getStage()
+      const pointer = stage?.getPointerPosition()
+      if (!pointer) return
+
+      const panelPos = stageToPanel(pointer.x, pointer.y, h, panX, panY, zoom)
+      const snappedX = snapToGrid(panelPos.x, 5.08)
+      const snappedY = snapToGrid(panelPos.y, 5)
+
+      if (activeGroupId) {
+        const group = groups.find(g => g.id === activeGroupId)
+        if (!group) return
+
+        const margin = Math.max(1, Math.min(group.dimensions.width, group.dimensions.height) * 0.1)
+        const halfW = group.dimensions.width / 2
+        const halfH = group.dimensions.height / 2
+        if (!placementWithinBounds(snappedX, snappedY, halfW, halfH, w, h, margin)) return
+
+        const allPlacements = panel.layers.flatMap(l => l.placements)
+        const newBox = getPartBoundingBox(snappedX, snappedY, halfW, halfH)
+        let hasOverlap = false
+        for (const pl of allPlacements) {
+          const plPart = parts.find(p => p.id === pl.partId)
+          if (!plPart) continue
+          const plMargin = Math.max(1, Math.min(plPart.dimensions.width, plPart.dimensions.height) * 0.1)
+          const buffer = (margin + plMargin) / 2
+          const plBox = getPartBoundingBox(pl.x, pl.y, plPart.dimensions.width / 2, plPart.dimensions.height / 2)
+          if (boxesOverlap(newBox, plBox, buffer)) { hasOverlap = true; break }
+        }
+        if (hasOverlap) return
+
         const agId = crypto.randomUUID()
-        const potPart = parts.find(p => p.name === 'Alpha9mmPot')
-        const knobPart = parts.find(p => p.name === 'Davies1900')
-        if (potPart) {
-          addPlacement('pcb_components', potPart.id, snappedX, snappedY, 0, agId)
-          if (potPart.pairedPanelPartId) {
-            addPlacement('panel', potPart.pairedPanelPartId, snappedX, snappedY, 0, agId)
+        for (let i = 0; i < group.slots.length; i++) {
+          const slot = group.slots[i]
+          const resolvedPartId = resolveSlotPartId(group, i, parts)
+          if (resolvedPartId) {
+            addPlacement(slot.layerType, resolvedPartId, snappedX, snappedY, 0, agId)
           }
         }
-        if (knobPart) {
-          addPlacement('interface', knobPart.id, snappedX, snappedY, 0, agId)
+      } else if (activePartId) {
+        const part = parts.find(p => p.id === activePartId)
+        if (!part) return
+
+        const margin = partMargin(part)
+        const halfW = part.dimensions.width / 2
+        const halfH = part.dimensions.height / 2
+        if (!placementWithinBounds(snappedX, snappedY, halfW, halfH, w, h, margin)) return
+
+        const allPlacements = panel.layers.flatMap(l => l.placements)
+        const newBox = getPartBoundingBox(snappedX, snappedY, halfW, halfH)
+        for (const pl of allPlacements) {
+          const plPart = parts.find(p => p.id === pl.partId)
+          if (!plPart) continue
+          const buffer = (margin + partMargin(plPart)) / 2
+          const plBox = getPartBoundingBox(pl.x, pl.y, plPart.dimensions.width / 2, plPart.dimensions.height / 2)
+          if (boxesOverlap(newBox, plBox, buffer)) return
         }
-      } else {
+
         const targetLayerType = part.layerType
         const pairedGroupId = (part.pairedPanelPartId || part.couplingGroup) ? crypto.randomUUID() : undefined
         addPlacement(targetLayerType, part.id, snappedX, snappedY, 0, pairedGroupId)
@@ -158,7 +218,7 @@ export function PanelCanvas() {
         }
       }
     }
-  }, [activeTool, activePartId, h, panX, panY, zoom, w, parts, addPlacement, panel.layers])
+  }, [activeTool, activePartId, activeGroupId, h, panX, panY, zoom, w, parts, groups, resolveSlotPartId, addPlacement, panel.layers])
 
   const handleMouseMove = useCallback((e: any) => {
     if (isPanning.current) {
@@ -169,35 +229,89 @@ export function PanelCanvas() {
       return
     }
 
-    if (activeTool === 'place' && activePartId) {
+    if (activeTool === 'text') {
       const stage = e.target.getStage()
       const pointer = stage?.getPointerPosition()
       if (pointer) {
         const panelPos = stageToPanel(pointer.x, pointer.y, h, panX, panY, zoom)
         setMousePanelPos(panelPos)
 
-        const part = parts.find(p => p.id === activePartId)
-        if (part) {
-          const sx = snapToGrid(panelPos.x, 5.08)
-          const sy = snapToGrid(panelPos.y, 5)
-          const margin = partMargin(part)
-          const halfW = part.dimensions.width / 2
-          const halfH = part.dimensions.height / 2
-          const inBounds = placementWithinBounds(sx, sy, halfW, halfH, w, h, margin)
-          const allPlacements = panel.layers.flatMap(l => l.placements)
-          const newBox = getPartBoundingBox(sx, sy, halfW, halfH)
-          const noOverlap = !allPlacements.some(pl => {
-            const plPart = parts.find(p => p.id === pl.partId)
-            if (!plPart) return false
-            const buffer = (margin + partMargin(plPart)) / 2
-            const plBox = getPartBoundingBox(pl.x, pl.y, plPart.dimensions.width / 2, plPart.dimensions.height / 2)
-            return boxesOverlap(newBox, plBox, buffer)
-          })
-          setIsPlacementValid(inBounds && noOverlap)
+        const panelLayer = panel.layers.find(l => l.type === 'panel')
+        const isCopperOnAluminium = textLayer === 'copper' && panelLayer?.material === 'aluminium'
+        if (isCopperOnAluminium) { setIsPlacementValid(false); return }
+
+        const sx = snapToGrid(panelPos.x, 5.08)
+        const sy = snapToGrid(panelPos.y, 5)
+        const halfW = 10
+        const halfH = 3
+        const margin = 1
+        const inBounds = placementWithinBounds(sx, sy, halfW, halfH, w, h, margin)
+        const allPlacements = panel.layers.flatMap(l => l.placements)
+        const newBox = getPartBoundingBox(sx, sy, halfW, halfH)
+        const noOverlap = !allPlacements.some(pl => {
+          const plPart = parts.find(p => p.id === pl.partId)
+          if (!plPart) return false
+          const buffer = (margin + partMargin(plPart)) / 2
+          const plBox = getPartBoundingBox(pl.x, pl.y, plPart.dimensions.width / 2, plPart.dimensions.height / 2)
+          return boxesOverlap(newBox, plBox, buffer)
+        })
+        setIsPlacementValid(inBounds && noOverlap)
+      }
+      return
+    }
+
+    if (activeTool === 'place' && (activePartId || activeGroupId)) {
+      const stage = e.target.getStage()
+      const pointer = stage?.getPointerPosition()
+      if (pointer) {
+        const panelPos = stageToPanel(pointer.x, pointer.y, h, panX, panY, zoom)
+        setMousePanelPos(panelPos)
+
+        if (activeGroupId) {
+          const group = groups.find(g => g.id === activeGroupId)
+          if (group) {
+            const sx = snapToGrid(panelPos.x, 5.08)
+            const sy = snapToGrid(panelPos.y, 5)
+            const margin = Math.max(1, Math.min(group.dimensions.width, group.dimensions.height) * 0.1)
+            const halfW = group.dimensions.width / 2
+            const halfH = group.dimensions.height / 2
+            const inBounds = placementWithinBounds(sx, sy, halfW, halfH, w, h, margin)
+            const allPlacements = panel.layers.flatMap(l => l.placements)
+            const newBox = getPartBoundingBox(sx, sy, halfW, halfH)
+            const noOverlap = !allPlacements.some(pl => {
+              const plPart = parts.find(p => p.id === pl.partId)
+              if (!plPart) return false
+              const plMargin = Math.max(1, Math.min(plPart.dimensions.width, plPart.dimensions.height) * 0.1)
+              const buffer = (margin + plMargin) / 2
+              const plBox = getPartBoundingBox(pl.x, pl.y, plPart.dimensions.width / 2, plPart.dimensions.height / 2)
+              return boxesOverlap(newBox, plBox, buffer)
+            })
+            setIsPlacementValid(inBounds && noOverlap)
+          }
+        } else if (activePartId) {
+          const part = parts.find(p => p.id === activePartId)
+          if (part) {
+            const sx = snapToGrid(panelPos.x, 5.08)
+            const sy = snapToGrid(panelPos.y, 5)
+            const margin = partMargin(part)
+            const halfW = part.dimensions.width / 2
+            const halfH = part.dimensions.height / 2
+            const inBounds = placementWithinBounds(sx, sy, halfW, halfH, w, h, margin)
+            const allPlacements = panel.layers.flatMap(l => l.placements)
+            const newBox = getPartBoundingBox(sx, sy, halfW, halfH)
+            const noOverlap = !allPlacements.some(pl => {
+              const plPart = parts.find(p => p.id === pl.partId)
+              if (!plPart) return false
+              const buffer = (margin + partMargin(plPart)) / 2
+              const plBox = getPartBoundingBox(pl.x, pl.y, plPart.dimensions.width / 2, plPart.dimensions.height / 2)
+              return boxesOverlap(newBox, plBox, buffer)
+            })
+            setIsPlacementValid(inBounds && noOverlap)
+          }
         }
       }
     }
-  }, [activeTool, activePartId, h, panX, panY, zoom, setPan, w, parts, panel.layers])
+  }, [activeTool, activePartId, activeGroupId, h, panX, panY, zoom, setPan, w, parts, groups, panel.layers])
 
   const handleMouseUp = useCallback(() => {
     isPanning.current = false
@@ -210,6 +324,12 @@ export function PanelCanvas() {
   }, [activeTool, clearSelection])
 
   const handlePlacementSelect = useCallback((id: string) => {
+    let isText = false
+    for (const layer of panel.layers) {
+      if (layer.texts.some(t => t.id === id)) { isText = true; break }
+    }
+    if (isText) { selectPlacement(id); return }
+
     let clickedPlacement: typeof panel.layers[0]['placements'][0] | undefined
     let clickedPart: typeof parts[0] | undefined
     for (const layer of panel.layers) {
@@ -325,6 +445,17 @@ export function PanelCanvas() {
     }
   }, [updatePlacement, removePlacement, parts, w, h, panel.layers])
 
+  const handleTextDragEnd = useCallback((textId: string, x: number, y: number) => {
+    const snappedX = snapToGrid(x, 5.08)
+    const snappedY = snapToGrid(y, 5)
+    for (const layer of panel.layers) {
+      if (layer.texts.some(t => t.id === textId)) {
+        updateTextPlacement(layer.type, textId, { x: snappedX, y: snappedY })
+        return
+      }
+    }
+  }, [updateTextPlacement, panel.layers])
+
   const visibleLayerTypes = panel.layers
     .filter(l => isLayerVisible(l.type))
     .map(l => l.type)
@@ -340,7 +471,7 @@ export function PanelCanvas() {
         flex: 1,
         overflow: 'hidden',
         position: 'relative',
-        cursor: activeTool === 'place' ? 'crosshair' : 'default',
+        cursor: activeTool === 'place' || activeTool === 'text' ? 'crosshair' : 'default',
       }}
     >
       <Stage
@@ -367,8 +498,8 @@ export function PanelCanvas() {
                     y={panY}
                     width={w * zoom}
                     height={h * zoom}
-                    fill={palette('#8a8a8a', '#555')}
-                    stroke={palette('#aaa', '#555')}
+                    fill="#6a6a6a"
+                    stroke="#888"
                     strokeWidth={1}
                     listening={false}
                   />
@@ -439,6 +570,24 @@ export function PanelCanvas() {
                   />
                 )
               })}
+              {panel.layers.find(l => l.type === layerType)?.texts.map((txt) => {
+                const layer = panel.layers.find(l => l.type === layerType)
+                if (!layer) return null
+                return (
+                  <TextNode
+                    key={txt.id}
+                    textPlacement={txt}
+                    panelHeight={h}
+                    panX={panX}
+                    panY={panY}
+                    zoom={zoom}
+                    selected={selectedPlacementIds.includes(txt.id)}
+                    layerType={layerType}
+                    onSelect={handlePlacementSelect}
+                    onDragEnd={(id, x, y) => handleTextDragEnd(id, x, y)}
+                  />
+                )
+              })}
             </Layer>
           )
         })}
@@ -447,11 +596,14 @@ export function PanelCanvas() {
           <PlacementGhost
             mousePanelPos={mousePanelPos}
             activePartId={activePartId}
+            activeGroupId={activeGroupId}
             panelHeight={h}
             panX={panX}
             panY={panY}
             zoom={zoom}
             valid={isPlacementValid}
+            activeTool={activeTool}
+            textLayer={textLayer}
           />
         </Layer>
       </Stage>

@@ -16,6 +16,8 @@ export function LayerControls() {
   const overlayMode = useUIStore(s => s.overlayMode)
   const setOverlayMode = useUIStore(s => s.setOverlayMode)
   const setLayerHeight = usePanelStore(s => s.setLayerHeight)
+  const setLayerMaterial = usePanelStore(s => s.setLayerMaterial)
+  const setLayerPcbLayers = usePanelStore(s => s.setLayerPcbLayers)
 
   return (
     <div
@@ -82,6 +84,27 @@ export function LayerControls() {
               />
               <span style={{ flex: 1, minWidth: 0 }}>{layer.label}</span>
             </div>
+            {layer.type === 'panel' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingLeft: '42px', marginTop: '1px' }}>
+                <span style={{ fontSize: '0.62rem', color: 'var(--color-text-dim)' }}>Mat:</span>
+                <select
+                  value={layer.material ?? 'aluminium'}
+                  onChange={e => setLayerMaterial(layer.id, e.target.value as 'aluminium' | 'pcb')}
+                  style={{
+                    fontSize: '0.65rem',
+                    padding: '1px 4px',
+                    background: 'var(--color-bg)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius)',
+                    color: 'var(--color-text)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="aluminium">Aluminium</option>
+                  <option value="pcb">PCB</option>
+                </select>
+              </div>
+            )}
             {layer.type === 'pcb_components' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingLeft: '42px', marginTop: '1px' }}>
                 <span style={{ fontSize: '0.62rem', color: 'var(--color-text-dim)' }}>H:</span>
@@ -106,6 +129,27 @@ export function LayerControls() {
                   }}
                 />
                 <span style={{ fontSize: '0.62rem', color: 'var(--color-text-dim)' }}>mm</span>
+              </div>
+            )}
+            {layer.type === 'pcb_components' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', paddingLeft: '42px', marginTop: '2px' }}>
+                <span style={{ fontSize: '0.62rem', color: 'var(--color-text-dim)' }}>Layers:</span>
+                <select
+                  value={layer.pcbLayers ?? 2}
+                  onChange={e => setLayerPcbLayers(layer.id, Number(e.target.value) as 2 | 4)}
+                  style={{
+                    fontSize: '0.65rem',
+                    padding: '1px 4px',
+                    background: 'var(--color-bg)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius)',
+                    color: 'var(--color-text)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value={2}>2 layers</option>
+                  <option value={4}>4 layers</option>
+                </select>
               </div>
             )}
           </div>

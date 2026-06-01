@@ -93,7 +93,9 @@ export function PropertiesPanel() {
   const setPanelName = usePanelStore(s => s.setPanelName)
   const setPanelAuthor = usePanelStore(s => s.setPanelAuthor)
   const updatePlacement = usePanelStore(s => s.updatePlacement)
+  const updateTextPlacement = usePanelStore(s => s.updateTextPlacement)
   const removePlacement = usePanelStore(s => s.removePlacement)
+  const removeTextPlacement = usePanelStore(s => s.removeTextPlacement)
   const setMountingHoleRingDiameter = usePanelStore(s => s.setMountingHoleRingDiameter)
   const selectedPlacementIds = useUIStore(s => s.selectedPlacementIds)
   const selectedMountingHoleIndex = useUIStore(s => s.selectedMountingHoleIndex)
@@ -104,8 +106,14 @@ export function PropertiesPanel() {
   const parts = usePartsLibraryStore(s => s.parts)
 
   let selected: { placement: import('../../core/types/panel').Placement; layerType: string; part: import('../../core/types/part').Part | undefined } | null = null
+  let selectedText: { text: import('../../core/types/panel').TextPlacement; layerType: string } | null = null
   if (selectedPlacementIds.length === 1) {
     for (const layer of panel.layers) {
+      const foundText = layer.texts.find(t => t.id === selectedPlacementIds[0])
+      if (foundText) {
+        selectedText = { text: foundText, layerType: layer.type }
+        break
+      }
       const found = layer.placements.find(p => p.id === selectedPlacementIds[0])
       if (found) {
         selected = { placement: found, layerType: layer.type, part: parts.find(p => p.id === found.partId) }
@@ -230,7 +238,80 @@ export function PropertiesPanel() {
             {selectedPlacementIds.length === 1 ? 'Placement Properties' : `Placements (${selectedPlacementIds.length})`}
           </div>
 
-          {selectedPlacementIds.length === 1 && selected ? (
+          {selectedPlacementIds.length === 1 && selectedText ? (
+            <>
+              <div style={{ fontSize: '0.7rem', color: 'var(--color-text-dim)', marginBottom: 'var(--spacing-sm)' }}>
+                Text — {selectedText.layerType === 'pcb_components' ? 'Copper' : 'Silkscreen'}
+              </div>
+              <div style={row}>
+                <span style={label}>Text</span>
+                <input
+                  style={input}
+                  value={selectedText.text.label}
+                  onChange={e => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { label: e.target.value })}
+                />
+              </div>
+              <div style={row}>
+                <span style={label}>Font Size</span>
+                <input
+                  style={narrowInput}
+                  type="number"
+                  step={0.5}
+                  min={1}
+                  max={20}
+                  value={selectedText.text.fontSize}
+                  onChange={e => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { fontSize: Number(e.target.value) })}
+                />
+              </div>
+              <div style={row}>
+                <span style={label}>X</span>
+                <input
+                  style={narrowInput}
+                  type="number"
+                  step={0.01}
+                  value={Number(selectedText.text.x.toFixed(2))}
+                  onChange={e => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { x: Number(e.target.value) })}
+                />
+              </div>
+              <div style={row}>
+                <span style={label}>Y</span>
+                <input
+                  style={narrowInput}
+                  type="number"
+                  step={0.01}
+                  value={Number(selectedText.text.y.toFixed(2))}
+                  onChange={e => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { y: Number(e.target.value) })}
+                />
+              </div>
+              <div style={row}>
+                <span style={label}>Rotation</span>
+                <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <input
+                    style={{ ...narrowInput, width: 50 }}
+                    type="number"
+                    step={1}
+                    value={selectedText.text.rotation}
+                    onChange={e => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { rotation: Number(e.target.value) })}
+                  />
+                  <button style={smallBtn} onClick={() => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { rotation: selectedText!.text.rotation + 90 })}>+90</button>
+                  <button style={smallBtn} onClick={() => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { rotation: selectedText!.text.rotation + 45 })}>+45</button>
+                  <button style={smallBtn} onClick={() => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { rotation: selectedText!.text.rotation + 30 })}>+30</button>
+                  <button style={smallBtn} onClick={() => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { rotation: selectedText!.text.rotation - 45 })}>−45</button>
+                  <button style={smallBtn} onClick={() => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { rotation: selectedText!.text.rotation - 90 })}>−90</button>
+                  <button style={smallBtn} onClick={() => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { rotation: 0 })}>0</button>
+                </div>
+              </div>
+              <div style={row}>
+                <span style={label}>Locked</span>
+                <input
+                  type="checkbox"
+                  style={checkbox}
+                  checked={selectedText.text.locked}
+                  onChange={e => updateTextPlacement(selectedText!.layerType as any, selectedText!.text.id, { locked: e.target.checked })}
+                />
+              </div>
+            </>
+          ) : selectedPlacementIds.length === 1 && selected ? (
             <>
               <div style={row}>
                 <span style={label}>Part</span>
@@ -322,6 +403,10 @@ export function PropertiesPanel() {
               onClick={() => {
                 for (const id of selectedPlacementIds) {
                   for (const layer of panel.layers) {
+                    if (layer.texts.some(t => t.id === id)) {
+                      removeTextPlacement(layer.type, id)
+                      break
+                    }
                     if (layer.placements.some(p => p.id === id)) {
                       removePlacement(layer.type, id)
                       break

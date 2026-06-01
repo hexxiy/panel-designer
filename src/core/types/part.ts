@@ -42,6 +42,7 @@ export interface GraphicCircle {
   cx: number; cy: number
   radius: number
   width: number
+  fill?: string
 }
 
 export interface GraphicArc {
@@ -88,4 +89,22 @@ export interface ComponentPairing {
   pcbPartId: string
   dx: number
   dy: number
+}
+
+export interface PartGroupSlot {
+  layerType: LayerType
+  partName: string
+}
+
+export interface PartGroup {
+  id: string
+  name: string
+  description?: string
+  category: PartCategory
+  slots: PartGroupSlot[]
+  dimensions: {
+    width: number
+    height: number
+    depth: number
+  }
 }
