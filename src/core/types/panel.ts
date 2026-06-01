@@ -28,6 +28,10 @@ export interface Layer {
   height?: number
 }
 
+export interface MountingHoleOverride {
+  ringDiameter: number
+}
+
 export interface Panel {
   id: string
   format: PanelFormatId
@@ -35,6 +39,7 @@ export interface Panel {
   layers: Layer[]
   pairings: ComponentPairing[]
   metadata: PanelMetadata
+  mountingHoleOverrides: Record<number, MountingHoleOverride>
 }
 
 export interface PanelMetadata {
@@ -65,11 +70,12 @@ export function createPanel(format: PanelFormatId, hp: number, actualWidthMm: nu
     format,
     dimensions: { hp, actualWidthMm, heightMm },
     layers: [
-      createLayer('interface', 'Interface Components'),
-      createLayer('panel', 'Panel'),
       createLayer('pcb_components', 'PCB Components', fmt.pcbHeightMm),
+      createLayer('panel', 'Panel'),
+      createLayer('interface', 'Interface Components'),
     ],
     pairings: [],
+    mountingHoleOverrides: {},
     metadata: { name: 'Untitled Panel', created: now, modified: now, version: 1 },
   }
 }

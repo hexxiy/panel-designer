@@ -5,16 +5,24 @@ export interface SExprNode {
   children: SExprChild[]
 }
 
+function isComplexString(c: SExprChild): boolean {
+  return typeof c === 'string' && c.startsWith('(')
+}
+
+function isComplex(c: SExprChild): boolean {
+  return typeof c === 'object' || isComplexString(c)
+}
+
 export function sexpr(name: string, ...children: SExprChild[]): string {
   if (children.length === 0) return `(${name})`
 
-  const allSimple = children.every(c => typeof c !== 'object')
+  const allSimple = children.every(c => !isComplex(c))
   if (allSimple) {
     const inner = children.map(formatChild).join(' ')
     return `(${name} ${inner})`
   }
 
-  const firstComplex = children.findIndex(c => typeof c === 'object')
+  const firstComplex = children.findIndex(c => isComplex(c))
   const leadingSimple = firstComplex > 0 ? children.slice(0, firstComplex) : []
   const rest = firstComplex >= 0 ? children.slice(firstComplex) : children
 
@@ -26,7 +34,7 @@ export function sexpr(name: string, ...children: SExprChild[]): string {
   }
 
   for (const c of rest) {
-    if (typeof c === 'object') {
+    if (isComplex(c)) {
       const formatted = formatChild(c)
       for (const line of formatted.split('\n')) {
         lines.push(`  ${line}`)

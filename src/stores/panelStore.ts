@@ -25,10 +25,11 @@ interface PanelState {
   setHp: (hp: number) => void
   setPanelName: (name: string) => void
   setPanelAuthor: (author: string) => void
-  addPlacement: (layerType: LayerType, partId: string, x: number, y: number, rotation?: number) => string
+  addPlacement: (layerType: LayerType, partId: string, x: number, y: number, rotation?: number, pairedGroupId?: string) => string
   removePlacement: (layerType: LayerType, placementId: string) => void
   updatePlacement: (layerType: LayerType, placementId: string, changes: Partial<Placement>) => void
   setLayerHeight: (layerId: string, height: number) => void
+  setMountingHoleRingDiameter: (index: number, ringDiameter: number) => void
   getLayerPlacements: (layerType: LayerType) => Placement[]
   saveToDB: () => Promise<void>
   loadFromDB: (id: string) => Promise<void>
@@ -135,7 +136,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
     },
   })),
 
-  addPlacement: (layerType, partId, x, y, rotation = 0) => {
+  addPlacement: (layerType, partId, x, y, rotation = 0, pairedGroupId?: string) => {
     const id = crypto.randomUUID()
     set(s => {
       const layer = findLayer(s.panel, layerType)
@@ -144,7 +145,7 @@ export const usePanelStore = create<PanelState>((set, get) => ({
       const undoStack = s.undoStack.length >= MAX_HISTORY
         ? [...s.undoStack.slice(1), oldPanel]
         : [...s.undoStack, oldPanel]
-      const placement: Placement = { id, partId, x, y, rotation, locked: false }
+      const placement: Placement = { id, partId, x, y, rotation, locked: false, pairedGroupId }
       return {
         panel: {
           ...s.panel,
@@ -224,6 +225,27 @@ export const usePanelStore = create<PanelState>((set, get) => ({
         layers: s.panel.layers.map(l =>
           l.id === layerId ? { ...l, height } : l
         ),
+        metadata: { ...s.panel.metadata, modified: new Date().toISOString() },
+      },
+      undoStack,
+      redoStack: [],
+      canUndo: true,
+      canRedo: false,
+    }
+  }),
+
+  setMountingHoleRingDiameter: (index, ringDiameter) => set(s => {
+    const oldPanel = clonePanel(s.panel)
+    const undoStack = s.undoStack.length >= MAX_HISTORY
+      ? [...s.undoStack.slice(1), oldPanel]
+      : [...s.undoStack, oldPanel]
+    return {
+      panel: {
+        ...s.panel,
+        mountingHoleOverrides: {
+          ...s.panel.mountingHoleOverrides,
+          [index]: { ringDiameter },
+        },
         metadata: { ...s.panel.metadata, modified: new Date().toISOString() },
       },
       undoStack,

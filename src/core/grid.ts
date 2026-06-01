@@ -64,8 +64,17 @@ export function getPartBoundingBox(x: number, y: number, halfW: number, halfH: n
   }
 }
 
-export function boxesOverlap(a: BoundingBox, b: BoundingBox): boolean {
-  return a.left < b.right && a.right > b.left && a.bottom < b.top && a.top > b.bottom
+export function boxesOverlap(a: BoundingBox, b: BoundingBox, buffer: number = 0): boolean {
+  return (
+    a.left < b.right + buffer &&
+    a.right > b.left - buffer &&
+    a.bottom < b.top + buffer &&
+    a.top > b.bottom - buffer
+  )
+}
+
+export function partMargin(part: { dimensions: { width: number; height: number } }): number {
+  return Math.max(1, Math.min(part.dimensions.width, part.dimensions.height) * 0.1)
 }
 
 export function placementWithinBounds(

@@ -50,19 +50,319 @@
     (pad_to_mask_clearance 0)
     (allow_soldermask_bridges_in_footprints no)
     (tenting front back)
+    (pcbplotparams
+      (layerselection 0x00000000_00000000_55555555_5755f5ff)
+      (plot_on_all_layers_selection 0x00000000_00000000_00000000_00000000)
+      (disableapertmacros no)
+      (usegerberextensions yes)
+      (usegerberattributes yes)
+      (usegerberadvancedattributes yes)
+      (creategerberjobfile yes)
+      (dashed_line_dash_ratio 12.000000)
+      (dashed_line_gap_ratio 3.000000)
+      (svgprecision 4)
+      (plotframeref no)
+      (mode 1)
+      (useauxorigin no)
+      (hpglpennumber 1)
+      (hpglpenspeed 20)
+      (hpglpendiameter 15.000000)
+      (pdf_front_fp_property_popups yes)
+      (pdf_back_fp_property_popups yes)
+      (pdf_metadata yes)
+      (pdf_single_document no)
+      (dxfpolygonmode yes)
+      (dxfimperialunits yes)
+      (dxfusepcbnewfont yes)
+      (psnegative no)
+      (psa4output no)
+      (plot_black_and_white yes)
+      (sketchpadsonfab no)
+      (plotpadnumbers no)
+      (hidednponfab no)
+      (sketchdnponfab yes)
+      (crossoutdnponfab yes)
+      (subtractmaskfromsilk yes)
+      (outputformat 1)
+      (mirror no)
+      (drillshape 0)
+      (scaleselection 1)
+      (outputdirectory "")
+    )
   )
 
   (net 0 "")
 
-  ; === Panel outline ===
-(gr_line (start 0.0000 0.0000) (end 50.5000 0.0000) (stroke (width 0.1200) (type solid)) (layer "Edge.Cuts"))
-(gr_line (start 50.5000 0.0000) (end 50.5000 128.5000) (stroke (width 0.1200) (type solid)) (layer "Edge.Cuts"))
-(gr_line (start 50.5000 128.5000) (end 0.0000 128.5000) (stroke (width 0.1200) (type solid)) (layer "Edge.Cuts"))
-(gr_line (start 0.0000 128.5000) (end 0.0000 0.0000) (stroke (width 0.1200) (type solid)) (layer "Edge.Cuts"))
+(gr_rect
+  (start 0 0)
+  (end 50.5000 128.5000)
+  (stroke
+    (width 0.05)
+    (type default)
+  )
+  (fill no)
+  (layer "Edge.Cuts")
+  (uuid "f3dfb26a-9606-4ea6-9521-df3ce6bdcc91")
+)
 
-  ; === Mounting holes ===
-(pad "" npth circle (at 7.5000 3.0000) (size 3.2000 3.2000) (drill 3.2000) (layers "*.Cu" "*.Mask"))
-(pad "" npth circle (at 43.0000 3.0000) (size 3.2000 3.2000) (drill 3.2000) (layers "*.Cu" "*.Mask"))
-(pad "" npth circle (at 7.5000 125.5000) (size 3.2000 3.2000) (drill 3.2000) (layers "*.Cu" "*.Mask"))
-(pad "" npth circle (at 43.0000 125.5000) (size 3.2000 3.2000) (drill 3.2000) (layers "*.Cu" "*.Mask"))
+(footprint "Eurocad:mounting_hole"
+  (layer "F.Cu")
+  (uuid "c2054a7a-9c49-4d4a-ac58-6af99f11ab7c")
+  (at 7.5000 3.0000)
+  (property "Reference" "REF**"
+    (at 0 0.5 0)
+    (layer "F.SilkS")
+    (uuid "f49369b5-1c80-4155-9299-11a7d4726152")
+    (effects
+      (font
+        (size 1 1)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Value" "mounting_hole"
+    (at 0 -0.5 0)
+    (layer "F.Fab")
+    (uuid "cde8da08-e761-4676-814e-d08108aa77f2")
+    (effects
+      (font
+        (size 1 1)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Datasheet" ""
+    (at 0 0 0)
+    (layer "F.Fab")
+    (hide yes)
+    (uuid "282b4826-40e1-4143-a068-9dad5aa59fb7")
+    (effects
+      (font
+        (size 1.27 1.27)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Description" ""
+    (at 0 0 0)
+    (layer "F.Fab")
+    (hide yes)
+    (uuid "151ff15d-b0bb-459b-b453-3bc1265da058")
+    (effects
+      (font
+        (size 1.27 1.27)
+        (thickness 0.15)
+      )
+    )
+  )
+  (attr through_hole)
+  (pad "1" thru_hole circle
+    (at 0 0)
+    (size 3.2000 3.2000)
+    (drill 3.2000)
+    (layers "*.Cu" "*.Mask")
+    (remove_unused_layers no)
+    (uuid "cca14e2d-a8f5-4765-98dc-8d0d7aa75839")
+  )
+  (embedded_fonts no)
+)
+(footprint "Eurocad:mounting_hole"
+  (layer "F.Cu")
+  (uuid "e6439a61-1481-41ae-8241-016c27ed29e3")
+  (at 43.0000 3.0000)
+  (property "Reference" "REF**"
+    (at 0 0.5 0)
+    (layer "F.SilkS")
+    (uuid "f6d8e090-4829-42b3-b2b4-e7f9f005397c")
+    (effects
+      (font
+        (size 1 1)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Value" "mounting_hole"
+    (at 0 -0.5 0)
+    (layer "F.Fab")
+    (uuid "5280e5e6-edb2-456a-887d-0c6d04ee8edf")
+    (effects
+      (font
+        (size 1 1)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Datasheet" ""
+    (at 0 0 0)
+    (layer "F.Fab")
+    (hide yes)
+    (uuid "5f96fd01-d378-42de-8a7c-a9bec1ced688")
+    (effects
+      (font
+        (size 1.27 1.27)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Description" ""
+    (at 0 0 0)
+    (layer "F.Fab")
+    (hide yes)
+    (uuid "bd9a11ee-4751-4ad2-9173-f48b3b5a9aaf")
+    (effects
+      (font
+        (size 1.27 1.27)
+        (thickness 0.15)
+      )
+    )
+  )
+  (attr through_hole)
+  (pad "1" thru_hole circle
+    (at 0 0)
+    (size 3.2000 3.2000)
+    (drill 3.2000)
+    (layers "*.Cu" "*.Mask")
+    (remove_unused_layers no)
+    (uuid "50a776dd-2ff3-4f6a-bbd3-1a585e5769f1")
+  )
+  (embedded_fonts no)
+)
+(footprint "Eurocad:mounting_hole"
+  (layer "F.Cu")
+  (uuid "0e2a63ad-fee6-487f-b2a9-975a193bb3e2")
+  (at 7.5000 125.5000)
+  (property "Reference" "REF**"
+    (at 0 0.5 0)
+    (layer "F.SilkS")
+    (uuid "3f17512f-e18c-40dd-b34a-d18d05fca37c")
+    (effects
+      (font
+        (size 1 1)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Value" "mounting_hole"
+    (at 0 -0.5 0)
+    (layer "F.Fab")
+    (uuid "43fb9189-7aff-4d2d-a89e-d2763d8349c0")
+    (effects
+      (font
+        (size 1 1)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Datasheet" ""
+    (at 0 0 0)
+    (layer "F.Fab")
+    (hide yes)
+    (uuid "e667f154-0632-4bd3-895c-de8501364041")
+    (effects
+      (font
+        (size 1.27 1.27)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Description" ""
+    (at 0 0 0)
+    (layer "F.Fab")
+    (hide yes)
+    (uuid "cdcbc713-caaf-40d8-9ccd-c6e22959a3d6")
+    (effects
+      (font
+        (size 1.27 1.27)
+        (thickness 0.15)
+      )
+    )
+  )
+  (attr through_hole)
+  (pad "1" thru_hole circle
+    (at 0 0)
+    (size 3.2000 3.2000)
+    (drill 3.2000)
+    (layers "*.Cu" "*.Mask")
+    (remove_unused_layers no)
+    (uuid "7c93a9c2-a7bd-4279-a9ab-c57d230dfc29")
+  )
+  (embedded_fonts no)
+)
+(footprint "Eurocad:mounting_hole"
+  (layer "F.Cu")
+  (uuid "19e47b3d-9450-4735-9137-bbe854095d2e")
+  (at 43.0000 125.5000)
+  (property "Reference" "REF**"
+    (at 0 0.5 0)
+    (layer "F.SilkS")
+    (uuid "336bfb4a-b780-442d-ad4d-87b740431e2a")
+    (effects
+      (font
+        (size 1 1)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Value" "mounting_hole"
+    (at 0 -0.5 0)
+    (layer "F.Fab")
+    (uuid "eb2c9aac-5ab1-412d-be89-8af3d36256d6")
+    (effects
+      (font
+        (size 1 1)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Datasheet" ""
+    (at 0 0 0)
+    (layer "F.Fab")
+    (hide yes)
+    (uuid "aa5346b2-7790-4787-9c84-9169032356c9")
+    (effects
+      (font
+        (size 1.27 1.27)
+        (thickness 0.15)
+      )
+    )
+  )
+  (property "Description" ""
+    (at 0 0 0)
+    (layer "F.Fab")
+    (hide yes)
+    (uuid "2bdc21e4-a147-47cb-9337-fd7eea685af2")
+    (effects
+      (font
+        (size 1.27 1.27)
+        (thickness 0.15)
+      )
+    )
+  )
+  (attr through_hole)
+  (pad "1" thru_hole circle
+    (at 0 0)
+    (size 3.2000 3.2000)
+    (drill 3.2000)
+    (layers "*.Cu" "*.Mask")
+    (remove_unused_layers no)
+    (uuid "b6a477dc-91fa-4350-a0c4-2d06db972fe1")
+  )
+  (embedded_fonts no)
+)
+
+(footprint "panel-designer:cutout"
+  (layer "F.Cu")
+  (uuid "d33cc794-dece-4585-8896-5394c3daf69a")
+  (at 15.2400 100.0000)
+  (attr board_only)
+  (pad "1" npth circle
+    (at 0 0)
+    (size 7.5000 7.5000)
+    (drill 7.5000)
+    (layers "*.Cu" "*.Mask")
+    (uuid "9c827eb4-8887-49bd-9db3-4a9d726b8d83")
+  )
+  (embedded_fonts no)
+)
+  (embedded_fonts no)
 )

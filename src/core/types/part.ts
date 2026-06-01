@@ -12,6 +12,7 @@ export interface Part {
   panelCutout?: PanelCutout
   model3d?: string
   couplingGroup?: string
+  pairedPanelPartId?: string
   dimensions: {
     width: number
     height: number
@@ -27,10 +28,45 @@ export interface PanelCutout {
   y: number
 }
 
+export type GraphicType = 'line' | 'circle' | 'arc' | 'text'
+
+export interface GraphicLine {
+  type: 'line'
+  x1: number; y1: number
+  x2: number; y2: number
+  width: number
+}
+
+export interface GraphicCircle {
+  type: 'circle'
+  cx: number; cy: number
+  radius: number
+  width: number
+}
+
+export interface GraphicArc {
+  type: 'arc'
+  x1: number; y1: number
+  x2: number; y2: number
+  mid?: { x: number; y: number }
+  angle?: number
+  width: number
+}
+
+export interface GraphicText {
+  type: 'text'
+  text: string
+  x: number; y: number
+  size: number
+}
+
+export type GraphicItem = GraphicLine | GraphicCircle | GraphicArc | GraphicText
+
 export interface KiCadFootprint {
   name: string
   pads: Pad[]
   models: string[]
+  graphics: GraphicItem[]
 }
 
 export interface Pad {

@@ -36,7 +36,10 @@ export function LayerControls() {
       >
         LAYERS
       </div>
-      {layers.map(layer => {
+      {[...layers].sort((a, b) => {
+        const order = { interface: 0, panel: 1, pcb_components: 2 }
+        return (order[a.type] ?? 3) - (order[b.type] ?? 3)
+      }).map(layer => {
         const visible = layerVisibility[layer.id] ?? layer.visible
         const isActive = activeLayerId === layer.id
         const color = LAYER_COLORS[layer.type] || '#888'

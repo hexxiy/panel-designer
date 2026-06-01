@@ -1,6 +1,8 @@
 import { create } from 'zustand'
 import type { Part } from '../core/types/part'
 import { parseKicadMod } from '../parsers/kicad'
+import { getLibraryParts } from '../core/library-parts'
+import { PART_PAIRINGS } from '../core/part-pairings'
 import { SAMPLE_PARTS } from '../core/sample-parts'
 
 const DB_NAME = 'panel-designer'
@@ -76,12 +78,30 @@ export const usePartsLibraryStore = create<PartsLibraryState>((set) => ({
     try {
       let parts = await getAllPartsFromDB()
       if (parts.length === 0) {
-        for (const part of SAMPLE_PARTS) await putPartInDB(part)
-        parts = SAMPLE_PARTS
+        const libraryParts = await getLibraryParts()
+        for (const part of libraryParts) await putPartInDB(part)
+        parts = libraryParts
+      } else {
+        const existingNames = new Set(parts.map(p => p.name))
+        for (const sp of SAMPLE_PARTS) {
+          if (!existingNames.has(sp.name)) {
+            parts.push(sp)
+          }
+        }
+        for (const part of parts) {
+          const pairedName = PART_PAIRINGS[part.name]
+          if (pairedName) {
+            const pairedPart = parts.find(p => p.name === pairedName)
+            if (pairedPart) {
+              part.pairedPanelPartId = pairedPart.id
+            }
+          }
+        }
       }
       set({ parts, loading: false })
     } catch {
-      set({ loading: false })
+      const libraryParts = await getLibraryParts()
+      set({ parts: libraryParts, loading: false })
     }
   },
 

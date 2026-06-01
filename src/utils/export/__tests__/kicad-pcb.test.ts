@@ -20,6 +20,7 @@ function makePart(name: string, category: Part['category'], layerType: Part['lay
         },
       ],
       models: [],
+      graphics: [],
     },
   }
 }

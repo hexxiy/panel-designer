@@ -27,6 +27,43 @@ export interface KiCadModel {
   rotate: { x: number; y: number; z: number }
 }
 
+export interface KiCadLine {
+  type: 'line'
+  start: { x: number; y: number }
+  end: { x: number; y: number }
+  width: number
+  layer: string
+}
+
+export interface KiCadCircle {
+  type: 'circle'
+  center: { x: number; y: number }
+  end: { x: number; y: number }
+  width: number
+  layer: string
+}
+
+export interface KiCadArc {
+  type: 'arc'
+  start: { x: number; y: number }
+  end: { x: number; y: number }
+  mid?: { x: number; y: number }
+  angle?: number
+  width: number
+  layer: string
+}
+
+export interface KiCadGraphicText {
+  type: 'text'
+  text: string
+  at: { x: number; y: number }
+  size: { x: number; y: number }
+  thickness: number
+  layer: string
+}
+
+export type KiCadGraphic = KiCadLine | KiCadCircle | KiCadArc | KiCadGraphicText
+
 export interface KiCadFootprint {
   name: string
   version?: number
@@ -35,4 +72,5 @@ export interface KiCadFootprint {
   attr?: string
   pads: KiCadPad[]
   models: KiCadModel[]
+  graphics: KiCadGraphic[]
 }

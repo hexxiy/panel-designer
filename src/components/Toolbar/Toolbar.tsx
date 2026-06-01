@@ -42,6 +42,7 @@ export function Toolbar() {
   const canRedo = usePanelStore(s => s.canRedo)
   const selectedPlacementIds = useUIStore(s => s.selectedPlacementIds)
   const removePlacement = usePanelStore(s => s.removePlacement)
+  const updatePlacement = usePanelStore(s => s.updatePlacement)
   const parts = usePartsLibraryStore(s => s.parts)
   const saveToDB = usePanelStore(s => s.saveToDB)
   const loadFromDB = usePanelStore(s => s.loadFromDB)
@@ -69,11 +70,27 @@ export function Toolbar() {
   }, [])
 
   const deleteSelected = useCallback(() => {
+    const pairedGroups = new Set<string>()
+    const directIds = new Set(selectedPlacementIds)
     for (const id of selectedPlacementIds) {
       for (const layer of panel.layers) {
+        const pl = layer.placements.find(p => p.id === id)
+        if (pl?.pairedGroupId) pairedGroups.add(pl.pairedGroupId)
+        break
+      }
+    }
+    const idsToRemove = new Set<string>()
+    for (const layer of panel.layers) {
+      for (const pl of layer.placements) {
+        if (directIds.has(pl.id) || (pl.pairedGroupId && pairedGroups.has(pl.pairedGroupId))) {
+          idsToRemove.add(pl.id)
+        }
+      }
+    }
+    for (const layer of panel.layers) {
+      for (const id of idsToRemove) {
         if (layer.placements.some(p => p.id === id)) {
           removePlacement(layer.type, id)
-          break
         }
       }
     }
@@ -121,10 +138,24 @@ export function Toolbar() {
         e.preventDefault()
         deleteSelected()
       }
+      if (e.key === 'r' || e.key === 'R') {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
+        e.preventDefault()
+        const delta = e.shiftKey ? -90 : 90
+        for (const id of selectedPlacementIds) {
+          for (const layer of panel.layers) {
+            const p = layer.placements.find(p => p.id === id)
+            if (p) {
+              updatePlacement(layer.type, id, { rotation: p.rotation + delta })
+              break
+            }
+          }
+        }
+      }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [undo, redo, deleteSelected, selectedPlacementIds.length])
+  }, [undo, redo, deleteSelected, selectedPlacementIds.length, panel.layers, updatePlacement])
 
   const handleImport = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -362,7 +393,7 @@ export function Toolbar() {
         >
           {THEME_LABELS[themeId]}
         </button>
-        <span style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem' }}>v0.3.0</span>
+        <span style={{ color: 'var(--color-text-dim)', fontSize: '0.8rem' }}>v0.4.0</span>
       </div>
     </div>
   )

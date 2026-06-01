@@ -104,47 +104,56 @@ export function PartsBrowser() {
             {loading ? 'loading...' : 'no parts'}
           </div>
         )}
-        {filtered.map(part => (
-          <div
-            key={part.id}
-            onClick={() => handlePartClick(part.id)}
-            style={{
-              padding: '4px var(--spacing-sm)',
-              borderBottom: '1px solid var(--color-border)',
-              cursor: 'pointer',
-              background: part.id === activePartId ? 'rgba(212,160,23,0.15)' : part.id === selectedPartId ? 'var(--color-bg)' : 'transparent',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              borderLeft: part.id === activePartId ? '2px solid #d4a017' : '2px solid transparent',
-            }}
-          >
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {part.name}
-              </div>
-              <div style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem' }}>
-                {part.category} · {part.layerType}
-                {part.dimensions && ` · ${part.dimensions.width.toFixed(1)}×${part.dimensions.height.toFixed(1)}`}
-              </div>
-            </div>
-            <button
-              onClick={e => { e.stopPropagation(); removePart(part.id) }}
-              title="Remove part"
+        {filtered.map(part => {
+          const pairedPart = part.pairedPanelPartId ? parts.find(p => p.id === part.pairedPanelPartId) : undefined
+          return (
+            <div
+              key={part.id}
+              onClick={() => handlePartClick(part.id)}
               style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--color-text-dim)',
+                padding: '4px var(--spacing-sm)',
+                borderBottom: '1px solid var(--color-border)',
                 cursor: 'pointer',
-                padding: '0 2px',
-                fontSize: '0.7rem',
-                opacity: 0.4,
+                background: part.id === activePartId ? 'rgba(212,160,23,0.15)' : part.id === selectedPartId ? 'var(--color-bg)' : 'transparent',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderLeft: part.id === activePartId ? '2px solid #d4a017' : '2px solid transparent',
               }}
             >
-              ×
-            </button>
-          </div>
-        ))}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ color: 'var(--color-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {part.name}
+                  {pairedPart && (
+                    <span style={{ color: '#8a8a8a', marginLeft: '4px', fontSize: '0.65rem' }}>
+                      + {pairedPart.name}
+                    </span>
+                  )}
+                </div>
+                <div style={{ color: 'var(--color-text-dim)', fontSize: '0.65rem' }}>
+                  {part.category} · {part.layerType}
+                  {part.dimensions && ` · ${part.dimensions.width.toFixed(1)}×${part.dimensions.height.toFixed(1)}`}
+                  {part.pairedPanelPartId && <span style={{ color: '#8a8a8a' }}> · panel hole</span>}
+                </div>
+              </div>
+              <button
+                onClick={e => { e.stopPropagation(); removePart(part.id) }}
+                title="Remove part"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--color-text-dim)',
+                  cursor: 'pointer',
+                  padding: '0 2px',
+                  fontSize: '0.7rem',
+                  opacity: 0.4,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )
+        })}
       </div>
 
       <div style={{ padding: 'var(--spacing-sm)', borderTop: '1px solid var(--color-border)' }}>

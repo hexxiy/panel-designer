@@ -1,4 +1,4 @@
-import type { SExpr, KiCadPad, KiCadModel, KiCadFootprint } from './types'
+import type { SExpr, KiCadPad, KiCadModel, KiCadFootprint, KiCadGraphic } from './types'
 import type { Part, PartCategory, LayerType, Pad } from '../../core/types/part'
 
 function findChild(sexpr: SExpr, name: string): SExpr | undefined {
@@ -56,6 +56,106 @@ function getModelVec(node: SExpr, propName: string): { x: number; y: number; z: 
     y: getNumber(xyz, 1),
     z: getNumber(xyz, 2),
   }
+}
+
+function getStrokeWidth(node: SExpr): number {
+  const stroke = findChild(node, 'stroke')
+  if (stroke) {
+    const w = findChild(stroke, 'width')
+    if (w) return getNumber(w, 0)
+  }
+  const directWidth = findChild(node, 'width')
+  if (directWidth) return getNumber(directWidth, 0)
+  return 0.12
+}
+
+function getLayerName(node: SExpr): string {
+  const layers = findChild(node, 'layer')
+  if (layers) return String(layers.children[0] ?? '')
+  return ''
+}
+
+function parseGraphics(sexpr: SExpr): KiCadGraphic[] {
+  const graphics: KiCadGraphic[] = []
+  for (const child of sexpr.children) {
+    if (typeof child !== 'object') continue
+    const layer = getLayerName(child as SExpr)
+    if (!layer.includes('SilkS')) continue
+
+    switch (child.name) {
+      case 'fp_line': {
+        const start = findChild(child as SExpr, 'start')
+        const end = findChild(child as SExpr, 'end')
+        if (start && end) {
+          graphics.push({
+            type: 'line',
+            start: { x: getNumber(start, 0), y: getNumber(start, 1) },
+            end: { x: getNumber(end, 0), y: getNumber(end, 1) },
+            width: getStrokeWidth(child as SExpr),
+            layer,
+          })
+        }
+        break
+      }
+      case 'fp_circle': {
+        const center = findChild(child as SExpr, 'center')
+        const end = findChild(child as SExpr, 'end')
+        if (center && end) {
+          graphics.push({
+            type: 'circle',
+            center: { x: getNumber(center, 0), y: getNumber(center, 1) },
+            end: { x: getNumber(end, 0), y: getNumber(end, 1) },
+            width: getStrokeWidth(child as SExpr),
+            layer,
+          })
+        }
+        break
+      }
+      case 'fp_arc': {
+        const start = findChild(child as SExpr, 'start')
+        const end = findChild(child as SExpr, 'end')
+        const mid = findChild(child as SExpr, 'mid')
+        const angleNode = findChild(child as SExpr, 'angle')
+        if (start && end) {
+          const arc: KiCadGraphic = {
+            type: 'arc',
+            start: { x: getNumber(start, 0), y: getNumber(start, 1) },
+            end: { x: getNumber(end, 0), y: getNumber(end, 1) },
+            width: getStrokeWidth(child as SExpr),
+            layer,
+          }
+          if (mid) {
+            arc.mid = { x: getNumber(mid, 0), y: getNumber(mid, 1) }
+          }
+          if (angleNode) {
+            arc.angle = getNumber(angleNode, 0)
+          }
+          graphics.push(arc)
+        }
+        break
+      }
+      case 'fp_text': {
+        const textNode = child as SExpr
+        const text = getString(textNode, 1)
+        const at = findChild(textNode, 'at')
+        const effects = findChild(textNode, 'effects')
+        const font = effects ? findChild(effects, 'font') : undefined
+        const size = font ? findChild(font, 'size') : undefined
+        if (at) {
+          graphics.push({
+            type: 'text',
+            text,
+            at: { x: getNumber(at, 0), y: getNumber(at, 1) },
+            size: size ? { x: getNumber(size, 0), y: getNumber(size, 1) } : { x: 1, y: 1 },
+            thickness: (font && findChild(font, 'thickness')) ? getNumber(findChild(font, 'thickness')!, 0) : 0.15,
+            layer,
+          })
+        }
+        break
+      }
+    }
+  }
+  return graphics
 }
 
 function getLayers(node: SExpr): string[] {
@@ -137,7 +237,8 @@ export function mapToKiCadFootprint(sexpr: SExpr): KiCadFootprint {
     models.push(model)
   }
 
-  return { name, pads, models }
+  const graphics = parseGraphics(sexpr)
+  return { name, pads, models, graphics }
 }
 
 export function mapToPart(sexpr: SExpr): Part {
@@ -166,6 +267,18 @@ export function mapToPart(sexpr: SExpr): Part {
         layers: p.layers.map(normalizeLayerName),
       })),
       models: footprint.models.map(m => m.path),
+      graphics: footprint.graphics.map(g => {
+        switch (g.type) {
+          case 'line':
+            return { type: 'line' as const, x1: g.start.x, y1: g.start.y, x2: g.end.x, y2: g.end.y, width: g.width }
+          case 'circle':
+            return { type: 'circle' as const, cx: g.center.x, cy: g.center.y, radius: Math.sqrt((g.end.x - g.center.x) ** 2 + (g.end.y - g.center.y) ** 2), width: g.width }
+          case 'arc':
+            return { type: 'arc' as const, x1: g.start.x, y1: g.start.y, x2: g.end.x, y2: g.end.y, mid: g.mid, angle: g.angle, width: g.width }
+          case 'text':
+            return { type: 'text' as const, text: g.text, x: g.at.x, y: g.at.y, size: g.size.x }
+        }
+      }),
     },
     panelCutout,
     dimensions: dims,

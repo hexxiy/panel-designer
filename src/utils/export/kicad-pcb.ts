@@ -1,7 +1,7 @@
 import { sexpr, type SExprChild } from './s-expr-builder'
 import { getFormat } from '../../core/standards'
 import { computeMountingHoles } from '../../core/panel-utils'
-import type { Panel } from '../../core/types/panel'
+import type { Panel, MountingHoleOverride } from '../../core/types/panel'
 import type { Part, Pad } from '../../core/types/part'
 
 function q(s: string): string {
@@ -60,15 +60,31 @@ function buildFootprintSExpr(refDes: string, part: Part, x: number, y: number, r
     sexpr('descr', q(part.description || '')),
     sexpr('tags', q(part.category)),
     sexpr('attr', 'through_hole'),
-    sexpr('fp_text', 'reference', q(refDes),
-      sexpr('at', '0', '0'),
+    sexpr('property', q('Reference'), q(refDes),
+      sexpr('at', 0, 0, 0),
       sexpr('layer', q('F.SilkS')),
-      sexpr('effects', sexpr('font', sexpr('size', '1', '1'), sexpr('thickness', '0.15'))),
+      sexpr('uuid', q(generateUuid())),
+      sexpr('effects', sexpr('font', sexpr('size', 1, 1), sexpr('thickness', 0.15))),
     ),
-    sexpr('fp_text', 'value', q(part.name),
-      sexpr('at', '0', '-3'),
+    sexpr('property', q('Value'), q(part.name),
+      sexpr('at', 0, -3, 0),
       sexpr('layer', q('F.Fab')),
-      sexpr('effects', sexpr('font', sexpr('size', '1', '1'), sexpr('thickness', '0.15'))),
+      sexpr('uuid', q(generateUuid())),
+      sexpr('effects', sexpr('font', sexpr('size', 1, 1), sexpr('thickness', 0.15))),
+    ),
+    sexpr('property', q('Datasheet'), q(''),
+      sexpr('at', 0, 0, 0),
+      sexpr('layer', q('F.Fab')),
+      sexpr('hide', 'yes'),
+      sexpr('uuid', q(generateUuid())),
+      sexpr('effects', sexpr('font', sexpr('size', 1.27, 1.27), sexpr('thickness', 0.15))),
+    ),
+    sexpr('property', q('Description'), q(''),
+      sexpr('at', 0, 0, 0),
+      sexpr('layer', q('F.Fab')),
+      sexpr('hide', 'yes'),
+      sexpr('uuid', q(generateUuid())),
+      sexpr('effects', sexpr('font', sexpr('size', 1.27, 1.27), sexpr('thickness', 0.15))),
     ),
   ]
 
@@ -97,15 +113,31 @@ function buildInterfaceSExpr(pl: { placement: import('../../core/types/panel').P
     sexpr('uuid', q(generateUuid())),
     sexpr('attr', 'virtual'),
     sexpr('at', fc(pl.placement.x), fc(pl.placement.y), fc(pl.placement.rotation)),
-    sexpr('fp_text', 'reference', q(refDes),
-      sexpr('at', '0', '0'),
+    sexpr('property', q('Reference'), q(refDes),
+      sexpr('at', 0, 0, 0),
       sexpr('layer', q('F.SilkS')),
-      sexpr('effects', sexpr('font', sexpr('size', '1', '1'), sexpr('thickness', '0.15'))),
+      sexpr('uuid', q(generateUuid())),
+      sexpr('effects', sexpr('font', sexpr('size', 1, 1), sexpr('thickness', 0.15))),
     ),
-    sexpr('fp_text', 'value', q(pl.part.name),
-      sexpr('at', '0', '-3'),
+    sexpr('property', q('Value'), q(pl.part.name),
+      sexpr('at', 0, -3, 0),
       sexpr('layer', q('F.SilkS')),
-      sexpr('effects', sexpr('font', sexpr('size', '1', '1'), sexpr('thickness', '0.15'))),
+      sexpr('uuid', q(generateUuid())),
+      sexpr('effects', sexpr('font', sexpr('size', 1, 1), sexpr('thickness', 0.15))),
+    ),
+    sexpr('property', q('Datasheet'), q(''),
+      sexpr('at', 0, 0, 0),
+      sexpr('layer', q('F.Fab')),
+      sexpr('hide', 'yes'),
+      sexpr('uuid', q(generateUuid())),
+      sexpr('effects', sexpr('font', sexpr('size', 1.27, 1.27), sexpr('thickness', 0.15))),
+    ),
+    sexpr('property', q('Description'), q(''),
+      sexpr('at', 0, 0, 0),
+      sexpr('layer', q('F.Fab')),
+      sexpr('hide', 'yes'),
+      sexpr('uuid', q(generateUuid())),
+      sexpr('effects', sexpr('font', sexpr('size', 1.27, 1.27), sexpr('thickness', 0.15))),
     ),
   )
 }
@@ -221,7 +253,7 @@ function buildOutlineLines(w: number, h: number): string[] {
   )]
 }
 
-function buildMountingHoleSExpr(x: number, y: number, diameter: number): string {
+function buildMountingHoleSExpr(x: number, y: number, drillDiameter: number, ringDiameter: number): string {
   const fpUuid = generateUuid()
   const padUuid = generateUuid()
 
@@ -255,8 +287,8 @@ function buildMountingHoleSExpr(x: number, y: number, diameter: number): string 
     sexpr('attr', 'through_hole'),
     sexpr('pad', q('1'), 'thru_hole', 'circle',
       sexpr('at', 0, 0),
-      sexpr('size', fc(diameter), fc(diameter)),
-      sexpr('drill', fc(diameter)),
+      sexpr('size', fc(ringDiameter), fc(ringDiameter)),
+      sexpr('drill', fc(drillDiameter)),
       sexpr('layers', q('*.Cu'), q('*.Mask')),
       sexpr('remove_unused_layers', 'no'),
       sexpr('uuid', q(padUuid)),
@@ -265,41 +297,40 @@ function buildMountingHoleSExpr(x: number, y: number, diameter: number): string 
   )
 }
 
-function buildMountingHoleLines(w: number, h: number, panelFormat: import('../../core/types/format').PanelFormat): string[] {
+function buildMountingHoleLines(w: number, h: number, panelFormat: import('../../core/types/format').PanelFormat, overrides?: Record<number, MountingHoleOverride>): string[] {
   const lines: string[] = []
-  const holes = computeMountingHoles(w, h, panelFormat)
+  const holes = computeMountingHoles(w, h, panelFormat, overrides)
   for (const hole of holes) {
-    lines.push(buildMountingHoleSExpr(hole.x, hole.y, hole.diameter))
+    lines.push(buildMountingHoleSExpr(hole.x, hole.y, hole.diameter, hole.ringDiameter))
   }
   return lines
 }
 
-function buildCutoutSExpr(x: number, y: number, diameter: number): string {
-  return sexpr('footprint', q('panel-designer:cutout'),
+function buildPanelFootprintSExpr(part: Part, x: number, y: number, rotation: number): string {
+  const fp = part.footprint
+  const fpName = `Eurocad:${fp?.name || part.name}`
+  const children: SExprChild[] = [
+    q(fpName),
+    sexpr('version', 20221018),
+    sexpr('generator', q('panel-designer')),
     sexpr('layer', q('F.Cu')),
     sexpr('uuid', q(generateUuid())),
-    sexpr('at', fc(x), fc(y)),
+    sexpr('at', fc(x), fc(y), fc(rotation)),
     sexpr('attr', 'board_only'),
-    sexpr('pad', q('1'), 'npth', 'circle',
-      sexpr('at', 0, 0),
-      sexpr('size', fc(diameter), fc(diameter)),
-      sexpr('drill', fc(diameter)),
-      sexpr('layers', q('*.Cu'), q('*.Mask')),
-      sexpr('uuid', q(generateUuid())),
-    ),
-    sexpr('embedded_fonts', 'no'),
-  )
+  ]
+  if (fp?.pads) {
+    for (const pad of fp.pads) children.push(buildPadSExpr(pad))
+  }
+  return sexpr('footprint', ...children)
 }
 
 function buildCutoutLines(panelLayer: LayerGroup['panel']): string[] {
   const lines: string[] = []
   if (panelLayer.length > 0) {
     lines.push('')
-    lines.push('  ; === Panel cutouts ===')
     for (const pl of panelLayer) {
-      const cutout = pl.part.panelCutout
-      if (cutout && cutout.type === 'circle') {
-        lines.push(buildCutoutSExpr(pl.placement.x + cutout.x, pl.placement.y - cutout.y, cutout.width))
+      if (pl.part.footprint && pl.part.footprint.pads.length > 0) {
+        lines.push(buildPanelFootprintSExpr(pl.part, pl.placement.x, pl.placement.y, pl.placement.rotation))
       }
     }
   }
@@ -362,17 +393,14 @@ export function exportKicadPcb(panel: Panel, parts: Part[]): string {
 
   const { pcb_components, interface: iface, panel: panelLayer } = groupPlacementsByLayer(panel, parts)
 
-  lines.push('  ; === Panel outline ===')
   lines.push(...buildOutlineLines(w, h))
 
   lines.push('')
-  lines.push('  ; === Mounting holes ===')
-  lines.push(...buildMountingHoleLines(w, h, panelFormat))
+  lines.push(...buildMountingHoleLines(w, h, panelFormat, panel.mountingHoleOverrides))
   lines.push(...buildCutoutLines(panelLayer))
 
   if (pcb_components.length > 0) {
     lines.push('')
-    lines.push('  ; === PCB component footprints ===')
     for (const pl of pcb_components) {
       const refDes = nextRefDes(pl.part.category, counters)
       lines.push(buildFootprintSExpr(refDes, pl.part, pl.placement.x, pl.placement.y, pl.placement.rotation))
@@ -381,7 +409,6 @@ export function exportKicadPcb(panel: Panel, parts: Part[]): string {
 
   if (iface.length > 0) {
     lines.push('')
-    lines.push('  ; === Interface components (silkscreen reference) ===')
     for (const pl of iface) {
       const refDes = nextRefDes(pl.part.category, counters)
       lines.push(buildInterfaceSExpr(pl, refDes))
@@ -389,7 +416,6 @@ export function exportKicadPcb(panel: Panel, parts: Part[]): string {
   }
 
   lines.push('')
-  lines.push('  ; === Copper zones ===')
   lines.push(...buildCopperZoneLines(w, h))
 
   lines.push('  (embedded_fonts no)')
@@ -405,17 +431,14 @@ export function exportKicadPcbPanelOnly(panel: Panel, parts: Part[]): string {
 
   const { interface: iface, panel: panelLayer } = groupPlacementsByLayer(panel, parts)
 
-  lines.push('  ; === Panel outline ===')
   lines.push(...buildOutlineLines(w, h))
 
   lines.push('')
-  lines.push('  ; === Mounting holes ===')
-  lines.push(...buildMountingHoleLines(w, h, panelFormat))
+  lines.push(...buildMountingHoleLines(w, h, panelFormat, panel.mountingHoleOverrides))
   lines.push(...buildCutoutLines(panelLayer))
 
   if (iface.length > 0) {
     lines.push('')
-    lines.push('  ; === Interface components (silkscreen reference) ===')
     for (const pl of iface) {
       const refDes = nextRefDes(pl.part.category, counters)
       lines.push(buildInterfaceSExpr(pl, refDes))
@@ -436,12 +459,10 @@ export function exportKicadPcbComponentsOnly(panel: Panel, parts: Part[]): strin
   const pcbLayer = panel.layers.find(l => l.type === 'pcb_components')
   const pcbH = pcbLayer?.height ?? getFormat(panel.format).pcbHeightMm
 
-  lines.push(`  ; === PCB boundary (${fc(pcbH)}mm high) ===`)
   lines.push(...buildOutlineLines(panel.dimensions.actualWidthMm, pcbH))
 
   if (pcb_components.length > 0) {
     lines.push('')
-    lines.push('  ; === PCB component footprints ===')
     for (const pl of pcb_components) {
       const refDes = nextRefDes(pl.part.category, counters)
       lines.push(buildFootprintSExpr(refDes, pl.part, pl.placement.x, pl.placement.y, pl.placement.rotation))
@@ -449,7 +470,6 @@ export function exportKicadPcbComponentsOnly(panel: Panel, parts: Part[]): strin
   }
 
   lines.push('')
-  lines.push('  ; === Copper zones ===')
   lines.push(...buildCopperZoneLines(panel.dimensions.actualWidthMm, pcbH))
 
   lines.push('  (embedded_fonts no)')
